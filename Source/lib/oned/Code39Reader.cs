@@ -57,6 +57,7 @@ namespace ZXing.OneD
 
       private readonly bool usingCheckDigit;
       private readonly bool extendedMode;
+	  private readonly bool allowMissingDelimiters;
       private readonly StringBuilder decodeRowResult;
       private readonly int[] counters;
 
@@ -76,7 +77,7 @@ namespace ZXing.OneD
       /// <param name="usingCheckDigit">if true, treat the last data character as a check digit, not
       /// data, and verify that the checksum passes.</param>
       public Code39Reader(bool usingCheckDigit)
-         :this(usingCheckDigit, false)
+         :this(usingCheckDigit, false, false)
       {
       }
 
@@ -88,10 +89,12 @@ namespace ZXing.OneD
       /// <param name="usingCheckDigit">if true, treat the last data character as a check digit, not
       /// data, and verify that the checksum passes.</param>
       /// <param name="extendedMode">if true, will attempt to decode extended Code 39 sequences in the text.</param>
-      public Code39Reader(bool usingCheckDigit, bool extendedMode)
+	  /// <param name="allowMissingDelimiters">if true, will decode even if first and last chars aren't '*'</param>
+      public Code39Reader(bool usingCheckDigit, bool extendedMode, bool allowMissingDelimiters)
       {
          this.usingCheckDigit = usingCheckDigit;
          this.extendedMode = extendedMode;
+		 this.allowMissingDelimiters = allowMissingDelimiters;
          decodeRowResult = new StringBuilder(20);
          counters = new int[9];
       }
@@ -110,52 +113,92 @@ namespace ZXing.OneD
             counters[index] = 0;
          decodeRowResult.Length = 0;
 
-         int[] start = findAsteriskPattern(row, counters);
-         if (start == null)
-            return null;
+			// overriding constructor value is possible
+			bool allowCode39MissingDelimiters = this.allowMissingDelimiters;
+			if (hints != null && hints.ContainsKey(DecodeHintType.ALLOW_CODE_39_MISSING_DELIMITERS)) {
+				allowCode39MissingDelimiters = (bool)hints[DecodeHintType.ALLOW_CODE_39_MISSING_DELIMITERS];
+			}
+
+			int[] start = { 0, 0 };
+			if (!this.allowMissingDelimiters) {
+				start = findAsteriskPattern(row, counters);
+				if (start == null)
+					return null;
+			}
 
          // Read off white space    
          int nextStart = row.getNextSet(start[1]);
          int end = row.Size;
+			
+			int lastStart;
+			int lastPatternSize;
+			if (this.allowMissingDelimiters) {
+				char decodedChar;
+				while (true) {
+					if (!recordPattern(row, nextStart, counters))
+						return null;
 
-         char decodedChar;
-         int lastStart;
-         do
-         {
-            if (!recordPattern(row, nextStart, counters))
-               return null;
+					int pattern = toNarrowWidePattern(counters);
+					if (pattern < 0) {
+						return null;
+					}
+					if (!patternToChar(pattern, out decodedChar))
+						return null;
+					decodeRowResult.Append(decodedChar);
+					lastStart = nextStart;
+					foreach (int counter in counters) {
+						nextStart += counter;
+					}
 
-            int pattern = toNarrowWidePattern(counters);
-            if (pattern < 0)
-            {
-               return null;
-            }
-            if (!patternToChar(pattern, out decodedChar))
-               return null;
-            decodeRowResult.Append(decodedChar);
-            lastStart = nextStart;
-            foreach (int counter in counters)
-            {
-               nextStart += counter;
-            }
-            // Read off white space
-            nextStart = row.getNextSet(nextStart);
-         } while (decodedChar != '*');
-         decodeRowResult.Length = decodeRowResult.Length - 1; // remove asterisk
+					// Read off white space
+					nextStart = row.getNextSet(nextStart);
+					// Look for whitespace after pattern:
+					lastPatternSize = 0;
+					foreach (int counter in counters) {
+						lastPatternSize += counter;
+					}
+					int whiteSpaceAfterEnd = nextStart - lastStart - lastPatternSize;
+					// If 50% of last pattern size, following last pattern, is whitespace, 
+					// found the end of the code, so break out of the loop
+					if ((whiteSpaceAfterEnd << 1) > lastPatternSize) {
+						break;
+					}
+				}
+			}
+			else {
+				char decodedChar;
+				do {
+					if (!recordPattern(row, nextStart, counters))
+						return null;
 
-         // Look for whitespace after pattern:
-         int lastPatternSize = 0;
-         foreach (int counter in counters)
-         {
-            lastPatternSize += counter;
-         }
-         int whiteSpaceAfterEnd = nextStart - lastStart - lastPatternSize;
-         // If 50% of last pattern size, following last pattern, is not whitespace, fail
-         // (but if it's whitespace to the very end of the image, that's OK)
-         if (nextStart != end && (whiteSpaceAfterEnd << 1) < lastPatternSize)
-         {
-            return null;
-         }
+					int pattern = toNarrowWidePattern(counters);
+					if (pattern < 0) {
+						return null;
+					}
+					if (!patternToChar(pattern, out decodedChar))
+						return null;
+					decodeRowResult.Append(decodedChar);
+					lastStart = nextStart;
+					foreach (int counter in counters) {
+						nextStart += counter;
+					}
+					// Read off white space
+					nextStart = row.getNextSet(nextStart);
+				} while (decodedChar != '*');
+				decodeRowResult.Length = decodeRowResult.Length - 1; // remove asterisk
+
+				// Look for whitespace after pattern:
+				lastPatternSize = 0;
+				foreach (int counter in counters) {
+					lastPatternSize += counter;
+				}
+				int whiteSpaceAfterEnd = nextStart - lastStart - lastPatternSize;
+				// If 50% of last pattern size, following last pattern, is not whitespace, fail
+				// (but if it's whitespace to the very end of the image, that's OK)
+				if (nextStart != end && (whiteSpaceAfterEnd << 1) < lastPatternSize) {
+					return null;
+				}
+			}
 
          // overriding constructor value is possible
          bool useCode39CheckDigit = usingCheckDigit;

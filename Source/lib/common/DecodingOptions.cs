@@ -202,13 +202,40 @@ namespace ZXing.Common
          }
       }
 
-      /// <summary>
-      /// Assume Code 39 codes employ a check digit. Maps to <see cref="bool" />.
-      /// </summary>
-      /// <value>
-      ///   <c>true</c> if it should assume a Code 39 check digit; otherwise, <c>false</c>.
-      /// </value>
-      public bool AssumeCode39CheckDigit
+		/// <summary>
+		/// Assume Code 39 codes employ a check digit. Maps to <see cref="bool" />.
+		/// </summary>
+		/// <value>
+		///   <c>true</c> if it should assume a Code 39 check digit; otherwise, <c>false</c>.
+		/// </value>
+		public bool AllowCode39MissingDelimiter
+		{
+			get
+			{
+				if (Hints.ContainsKey(DecodeHintType.ALLOW_CODE_39_MISSING_DELIMITERS))
+					return (bool)Hints[DecodeHintType.ALLOW_CODE_39_MISSING_DELIMITERS];
+				return false;
+			}
+			set
+			{
+				if (value) {
+					Hints[DecodeHintType.ALLOW_CODE_39_MISSING_DELIMITERS] = true;
+				}
+				else {
+					if (Hints.ContainsKey(DecodeHintType.ALLOW_CODE_39_MISSING_DELIMITERS)) {
+						Hints.Remove(DecodeHintType.ALLOW_CODE_39_MISSING_DELIMITERS);
+					}
+				}
+			}
+		}
+
+		/// <summary>
+		/// Assume Code 39 codes employ a check digit. Maps to <see cref="bool" />.
+		/// </summary>
+		/// <value>
+		///   <c>true</c> if it should assume a Code 39 check digit; otherwise, <c>false</c>.
+		/// </value>
+		public bool AssumeCode39CheckDigit
       {
          get
          {

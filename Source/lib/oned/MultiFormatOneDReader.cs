@@ -63,7 +63,9 @@ namespace ZXing.OneD
                                           (bool) hints[DecodeHintType.ASSUME_CODE_39_CHECK_DIGIT];
                bool useCode39ExtendedMode = hints.ContainsKey(DecodeHintType.USE_CODE_39_EXTENDED_MODE) &&
                                             (bool) hints[DecodeHintType.USE_CODE_39_EXTENDED_MODE];
-               readers.Add(new Code39Reader(useCode39CheckDigit, useCode39ExtendedMode));
+			   bool allowCode39MissingDelimiters = hints.ContainsKey(DecodeHintType.ALLOW_CODE_39_MISSING_DELIMITERS) &&
+											(bool)hints[DecodeHintType.ALLOW_CODE_39_MISSING_DELIMITERS];
+               readers.Add(new Code39Reader(useCode39CheckDigit, useCode39ExtendedMode, allowCode39MissingDelimiters));
             }
             if (possibleFormats.Contains(BarcodeFormat.CODE_93) || possibleFormats.Contains(BarcodeFormat.All_1D))
             {
@@ -96,10 +98,12 @@ namespace ZXing.OneD
                                        (bool) hints[DecodeHintType.ASSUME_CODE_39_CHECK_DIGIT];
             bool useCode39ExtendedMode = hints != null && hints.ContainsKey(DecodeHintType.USE_CODE_39_EXTENDED_MODE) &&
                                          (bool) hints[DecodeHintType.USE_CODE_39_EXTENDED_MODE];
-            // MSI needs to be activated explicit
+			bool allowCode39MissingDelimiters = hints.ContainsKey(DecodeHintType.ALLOW_CODE_39_MISSING_DELIMITERS) &&
+										(bool)hints[DecodeHintType.ALLOW_CODE_39_MISSING_DELIMITERS];
+			// MSI needs to be activated explicit
 
-            readers.Add(new MultiFormatUPCEANReader(hints));
-            readers.Add(new Code39Reader(useCode39CheckDigit, useCode39ExtendedMode));
+			readers.Add(new MultiFormatUPCEANReader(hints));
+            readers.Add(new Code39Reader(useCode39CheckDigit, useCode39ExtendedMode, allowCode39MissingDelimiters));
             readers.Add(new CodaBarReader());
             readers.Add(new Code93Reader());
             readers.Add(new Code128Reader());

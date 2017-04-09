@@ -84,6 +84,11 @@ namespace ZXing
       /// </summary>
       USE_CODE_39_EXTENDED_MODE,
 
+	  /// <summary>
+	  /// Decode Code39 even if leading and trailing '*' chars are missing
+	  /// </summary>
+	  ALLOW_CODE_39_MISSING_DELIMITERS,
+
       /// <summary>
       /// Don't fail if a Code39 is detected but can't be decoded in extended mode.
       /// Return the raw Code39 result instead. Maps to <see cref="bool" />.
