@@ -24,7 +24,7 @@ namespace ZXing.OneD.Test
    public sealed class Code39ExtendedBlackBox2TestCase : AbstractBlackBoxTestCase
    {
       public Code39ExtendedBlackBox2TestCase()
-         : base("test/data/blackbox/code39-2", new Code39Reader(false, true), BarcodeFormat.CODE_39)
+         : base("test/data/blackbox/code39-2", new Code39Reader(false, true, false), BarcodeFormat.CODE_39)
       {
          addTest(2, 2, 0.0f);
          addTest(2, 2, 180.0f);

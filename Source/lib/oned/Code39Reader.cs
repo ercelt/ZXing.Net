@@ -119,11 +119,17 @@ namespace ZXing.OneD
 				allowCode39MissingDelimiters = (bool)hints[DecodeHintType.ALLOW_CODE_39_MISSING_DELIMITERS];
 			}
 
-			int[] start = { 0, 0 };
-			if (!this.allowMissingDelimiters) {
-				start = findAsteriskPattern(row, counters);
-				if (start == null)
+
+			// If an asterisk is found at the beginning, continue assuming delimited
+			// if not, and missing delimiters are allowed, continue, starting from the beginning
+			bool expectEndDelimiter = true;
+			int[] start = findAsteriskPattern(row, counters);
+			if (start == null) {
+				if (!this.allowMissingDelimiters) {
 					return null;
+				}
+				start = new int[] { 0, 0 };
+				expectEndDelimiter = false;
 			}
 
          // Read off white space    
@@ -132,7 +138,8 @@ namespace ZXing.OneD
 			
 			int lastStart;
 			int lastPatternSize;
-			if (this.allowMissingDelimiters) {
+
+			if (!expectEndDelimiter) {
 				char decodedChar;
 				while (true) {
 					if (!recordPattern(row, nextStart, counters))
@@ -160,7 +167,7 @@ namespace ZXing.OneD
 					int whiteSpaceAfterEnd = nextStart - lastStart - lastPatternSize;
 					// If 50% of last pattern size, following last pattern, is whitespace, 
 					// found the end of the code, so break out of the loop
-					if ((whiteSpaceAfterEnd << 1) > lastPatternSize) {
+					if (nextStart == end || (whiteSpaceAfterEnd << 1) > lastPatternSize) {
 						break;
 					}
 				}
